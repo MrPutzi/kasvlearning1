@@ -1,0 +1,152 @@
+<html>
+<head>
+<title>RestController.java</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+RestController.java</font>
+</center></td></tr></table>
+<pre><span class="s0">package </span><span class="s1">sk</span><span class="s2">.</span><span class="s1">kasv</span><span class="s2">.</span><span class="s1">fekete</span><span class="s2">.</span><span class="s1">Controller</span><span class="s2">;</span>
+
+<span class="s0">import </span><span class="s1">com</span><span class="s2">.</span><span class="s1">mongodb</span><span class="s2">.</span><span class="s1">client</span><span class="s2">.*;</span>
+<span class="s0">import </span><span class="s1">org</span><span class="s2">.</span><span class="s1">bson</span><span class="s2">.</span><span class="s1">Document</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">org</span><span class="s2">.</span><span class="s1">springframework</span><span class="s2">.</span><span class="s1">http</span><span class="s2">.</span><span class="s1">ResponseEntity</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">org</span><span class="s2">.</span><span class="s1">springframework</span><span class="s2">.</span><span class="s1">web</span><span class="s2">.</span><span class="s1">bind</span><span class="s2">.</span><span class="s1">annotation</span><span class="s2">.*;</span>
+<span class="s0">import </span><span class="s1">sk</span><span class="s2">.</span><span class="s1">kasv</span><span class="s2">.</span><span class="s1">fekete</span><span class="s2">.</span><span class="s1">Database</span><span class="s2">.</span><span class="s1">getConnection</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">sk</span><span class="s2">.</span><span class="s1">kasv</span><span class="s2">.</span><span class="s1">fekete</span><span class="s2">.</span><span class="s1">Util</span><span class="s2">.</span><span class="s1">Role</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">sk</span><span class="s2">.</span><span class="s1">kasv</span><span class="s2">.</span><span class="s1">fekete</span><span class="s2">.</span><span class="s1">Util</span><span class="s2">.</span><span class="s1">Token</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">sk</span><span class="s2">.</span><span class="s1">kasv</span><span class="s2">.</span><span class="s1">fekete</span><span class="s2">.</span><span class="s1">Util</span><span class="s2">.</span><span class="s1">User</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">sk</span><span class="s2">.</span><span class="s1">kasv</span><span class="s2">.</span><span class="s1">fekete</span><span class="s2">.</span><span class="s1">Util</span><span class="s2">.</span><span class="s1">Util</span><span class="s2">;</span>
+
+<span class="s0">import </span><span class="s1">java</span><span class="s2">.</span><span class="s1">util</span><span class="s2">.</span><span class="s1">HashMap</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">java</span><span class="s2">.</span><span class="s1">util</span><span class="s2">.</span><span class="s1">Iterator</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s1">java</span><span class="s2">.</span><span class="s1">util</span><span class="s2">.</span><span class="s1">Map</span><span class="s2">;</span>
+
+<span class="s1">@org</span><span class="s2">.</span><span class="s1">springframework</span><span class="s2">.</span><span class="s1">web</span><span class="s2">.</span><span class="s1">bind</span><span class="s2">.</span><span class="s1">annotation</span><span class="s2">.</span><span class="s1">RestController</span>
+<span class="s1">@CrossOrigin</span>
+<span class="s0">public class </span><span class="s1">RestController </span><span class="s2">{</span>
+
+    <span class="s1">Map</span><span class="s2">&lt;</span><span class="s1">String</span><span class="s2">,</span><span class="s1">String</span><span class="s2">&gt; </span><span class="s1">tokens </span><span class="s2">= </span><span class="s0">new </span><span class="s1">HashMap</span><span class="s2">&lt;&gt;();</span>
+    <span class="s1">Util util </span><span class="s2">= </span><span class="s0">new </span><span class="s1">Util</span><span class="s2">();</span>
+
+    <span class="s3">/*@PostMapping(name = &quot;/login&quot;) 
+    public String login() { 
+        String username=&quot;&quot;; 
+        String password=&quot;&quot;; 
+        getConnection connection = new getConnection(); 
+        Role role = connection.checkUser(username, password); 
+        if (role == null) { 
+            return &quot;Wrong username or password&quot;; 
+        } else { 
+            String token = new Util().generateToken(username, password); 
+            Token.getInstance().insertToken(username, token); 
+        } 
+        return &quot;Login successful&quot;; 
+    } 
+    */</span>
+
+
+
+ <span class="s3">/*   @PostMapping (value = &quot;/register&quot;, consumes = &quot;application/json&quot;, produces = &quot;application/json&quot;) 
+    @ResponseBody 
+    public ResponseEntity&lt;String&gt; register (@RequestBody String data) { 
+        MongoClient mongoClient = MongoClients.create(&quot;mongodb://localhost:27017&quot;); 
+        MongoDatabase database = mongoClient.getDatabase(&quot;Lectures&quot;); 
+        MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;User&quot;); 
+        Document user = new Document().append(&quot;username&quot;, data).append(&quot;password&quot;, data).append(&quot;role&quot;, &quot;USER&quot;); 
+        collection.insertOne(user); 
+        return ResponseEntity.ok(&quot;User registered&quot;); 
+    } 
+ 
+  */</span>
+
+    <span class="s1">@PostMapping</span><span class="s2">(</span><span class="s1">value </span><span class="s2">= </span><span class="s4">&quot;/register&quot;</span><span class="s2">, </span><span class="s1">consumes </span><span class="s2">= </span><span class="s4">&quot;application/json&quot;</span><span class="s2">, </span><span class="s1">produces </span><span class="s2">= </span><span class="s4">&quot;application/json&quot;</span><span class="s2">)</span>
+    <span class="s1">@ResponseBody</span>
+    <span class="s0">public </span><span class="s1">ResponseEntity</span><span class="s2">&lt;</span><span class="s1">String</span><span class="s2">&gt; </span><span class="s1">register</span><span class="s2">(</span><span class="s1">@RequestBody User user</span><span class="s2">) {</span>
+        <span class="s1">MongoClient mongoClient </span><span class="s2">= </span><span class="s1">MongoClients</span><span class="s2">.</span><span class="s1">create</span><span class="s2">(</span><span class="s4">&quot;mongodb://localhost:27017&quot;</span><span class="s2">);</span>
+        <span class="s1">MongoDatabase database </span><span class="s2">= </span><span class="s1">mongoClient</span><span class="s2">.</span><span class="s1">getDatabase</span><span class="s2">(</span><span class="s4">&quot;Lectures&quot;</span><span class="s2">);</span>
+        <span class="s1">MongoCollection</span><span class="s2">&lt;</span><span class="s1">Document</span><span class="s2">&gt; </span><span class="s1">collection </span><span class="s2">= </span><span class="s1">database</span><span class="s2">.</span><span class="s1">getCollection</span><span class="s2">(</span><span class="s4">&quot;User&quot;</span><span class="s2">);</span>
+        <span class="s1">Document document </span><span class="s2">= </span><span class="s0">new </span><span class="s1">Document</span><span class="s2">()</span>
+                <span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s4">&quot;username&quot;</span><span class="s2">, </span><span class="s1">user</span><span class="s2">.</span><span class="s1">getUsername</span><span class="s2">())</span>
+                <span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s4">&quot;password&quot;</span><span class="s2">, </span><span class="s1">user</span><span class="s2">.</span><span class="s1">getPassword</span><span class="s2">())</span>
+                <span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s4">&quot;email&quot;</span><span class="s2">, </span><span class="s1">user</span><span class="s2">.</span><span class="s1">getEmail</span><span class="s2">())</span>
+                <span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s4">&quot;role&quot;</span><span class="s2">, </span><span class="s4">&quot;USER&quot;</span><span class="s2">);</span>
+        <span class="s1">collection</span><span class="s2">.</span><span class="s1">insertOne</span><span class="s2">(</span><span class="s1">document</span><span class="s2">);</span>
+        <span class="s0">return </span><span class="s1">ResponseEntity</span><span class="s2">.</span><span class="s1">ok</span><span class="s2">(</span><span class="s4">&quot;User registered&quot;</span><span class="s2">);</span>
+    <span class="s2">}</span>
+
+
+    <span class="s1">@PostMapping</span><span class="s2">(</span><span class="s1">value </span><span class="s2">= </span><span class="s4">&quot;/login&quot;</span><span class="s2">, </span><span class="s1">consumes </span><span class="s2">= </span><span class="s4">&quot;application/json&quot;</span><span class="s2">, </span><span class="s1">produces </span><span class="s2">= </span><span class="s4">&quot;application/json&quot;</span><span class="s2">)</span>
+    <span class="s1">@ResponseBody</span>
+    <span class="s0">public </span><span class="s1">ResponseEntity</span><span class="s2">&lt;</span><span class="s1">String</span><span class="s2">&gt; </span><span class="s1">login</span><span class="s2">(</span><span class="s1">@RequestBody User user</span><span class="s2">) {</span>
+        <span class="s1">MongoClient mongoClient </span><span class="s2">= </span><span class="s1">MongoClients</span><span class="s2">.</span><span class="s1">create</span><span class="s2">(</span><span class="s4">&quot;mongodb://localhost:27017&quot;</span><span class="s2">);</span>
+        <span class="s1">MongoDatabase database </span><span class="s2">= </span><span class="s1">mongoClient</span><span class="s2">.</span><span class="s1">getDatabase</span><span class="s2">(</span><span class="s4">&quot;Lectures&quot;</span><span class="s2">);</span>
+        <span class="s1">MongoCollection</span><span class="s2">&lt;</span><span class="s1">Document</span><span class="s2">&gt; </span><span class="s1">collection </span><span class="s2">= </span><span class="s1">database</span><span class="s2">.</span><span class="s1">getCollection</span><span class="s2">(</span><span class="s4">&quot;User&quot;</span><span class="s2">);</span>
+        <span class="s1">Document query </span><span class="s2">= </span><span class="s0">new </span><span class="s1">Document</span><span class="s2">(</span><span class="s4">&quot;username&quot;</span><span class="s2">, </span><span class="s1">user</span><span class="s2">.</span><span class="s1">getUsername</span><span class="s2">()).</span><span class="s1">append</span><span class="s2">(</span><span class="s4">&quot;password&quot;</span><span class="s2">, </span><span class="s1">user</span><span class="s2">.</span><span class="s1">getPassword</span><span class="s2">());</span>
+        <span class="s1">FindIterable</span><span class="s2">&lt;</span><span class="s1">Document</span><span class="s2">&gt; </span><span class="s1">iterable </span><span class="s2">= </span><span class="s1">collection</span><span class="s2">.</span><span class="s1">find</span><span class="s2">(</span><span class="s1">query</span><span class="s2">);</span>
+        <span class="s1">Iterator</span><span class="s2">&lt;</span><span class="s1">Document</span><span class="s2">&gt; </span><span class="s1">iterator </span><span class="s2">= </span><span class="s1">iterable</span><span class="s2">.</span><span class="s1">iterator</span><span class="s2">();</span>
+        <span class="s0">if </span><span class="s2">(</span><span class="s1">iterator</span><span class="s2">.</span><span class="s1">hasNext</span><span class="s2">()) {</span>
+            <span class="s1">Document document </span><span class="s2">= </span><span class="s1">iterator</span><span class="s2">.</span><span class="s1">next</span><span class="s2">();</span>
+            <span class="s1">String role </span><span class="s2">= </span><span class="s1">document</span><span class="s2">.</span><span class="s1">getString</span><span class="s2">(</span><span class="s4">&quot;role&quot;</span><span class="s2">);</span>
+            <span class="s1">String token </span><span class="s2">= </span><span class="s0">new </span><span class="s1">Util</span><span class="s2">().</span><span class="s1">generateToken</span><span class="s2">(</span><span class="s1">user</span><span class="s2">.</span><span class="s1">getUsername</span><span class="s2">(), </span><span class="s1">user</span><span class="s2">.</span><span class="s1">getPassword</span><span class="s2">());</span>
+            <span class="s1">Token</span><span class="s2">.</span><span class="s1">getInstance</span><span class="s2">().</span><span class="s1">insertToken</span><span class="s2">(</span><span class="s1">user</span><span class="s2">.</span><span class="s1">getUsername</span><span class="s2">(), </span><span class="s1">token</span><span class="s2">);</span>
+            <span class="s0">if </span><span class="s2">(</span><span class="s1">role</span><span class="s2">.</span><span class="s1">equals</span><span class="s2">(</span><span class="s4">&quot;ADMIN&quot;</span><span class="s2">)) {</span>
+                <span class="s0">return </span><span class="s1">ResponseEntity</span><span class="s2">.</span><span class="s1">ok</span><span class="s2">(</span><span class="s4">&quot;Admin logged in&quot;</span><span class="s2">);</span>
+            <span class="s2">} </span><span class="s0">else if </span><span class="s2">(</span><span class="s1">role</span><span class="s2">.</span><span class="s1">equals</span><span class="s2">(</span><span class="s4">&quot;USER&quot;</span><span class="s2">)) {</span>
+                <span class="s0">return </span><span class="s1">ResponseEntity</span><span class="s2">.</span><span class="s1">ok</span><span class="s2">(</span><span class="s4">&quot;User logged in&quot;</span><span class="s2">);</span>
+            <span class="s2">}</span>
+        <span class="s2">}</span>
+        <span class="s0">return </span><span class="s1">ResponseEntity</span><span class="s2">.</span><span class="s1">ok</span><span class="s2">(</span><span class="s4">&quot;User not found&quot;</span><span class="s2">);</span>
+    <span class="s2">}</span>
+
+
+
+  <span class="s3">/*  @PostMapping (value = &quot;/logout&quot;, consumes = &quot;application/json&quot;, produces = &quot;application/json&quot;) 
+    @ResponseBody 
+    public ResponseEntity &lt;String&gt; logout (@RequestBody String data) { 
+        MongoClient mongoClient = MongoClients.create(&quot;mongodb://localhost:27017&quot;); 
+        MongoDatabase database = mongoClient.getDatabase(&quot;Lectures&quot;); 
+        MongoCollection&lt;Document&gt; collection = database.getCollection(&quot;User&quot;); 
+        Document user = new Document().append(&quot;username&quot;, data).append(&quot;password&quot;, data); 
+        FindIterable&lt;Document&gt; iterable = collection.find(user); 
+        Iterator&lt;Document&gt; iterator = iterable.iterator(); 
+        if (iterator.hasNext()) { 
+            Document document = (Document) iterator.next(); 
+            String passwordFromDatabase = document.getString(&quot;password&quot;); 
+            if (passwordFromDatabase.equals(data)) { 
+                String token = new Util().generateToken(data, data); 
+                Token.getInstance().deleteToken(data); 
+                String role = document.getString(&quot;role&quot;); 
+                if (role.equals(&quot;ADMIN&quot;)) { 
+                    return ResponseEntity.ok(&quot;Admin logged out&quot;); 
+                } else if (role.equals(&quot;USER&quot;)) { 
+                    return ResponseEntity.ok(&quot;User logged out&quot;); 
+                } 
+            } 
+        } 
+        return ResponseEntity.ok(&quot;User not found&quot;); 
+    } 
+ 
+ 
+   */</span>
+
+    <span class="s1">@PostMapping </span><span class="s2">(</span><span class="s1">value </span><span class="s2">= </span><span class="s4">&quot;/logout&quot;</span><span class="s2">, </span><span class="s1">consumes </span><span class="s2">= </span><span class="s4">&quot;application/json&quot;</span><span class="s2">, </span><span class="s1">produces </span><span class="s2">= </span><span class="s4">&quot;application/json&quot;</span><span class="s2">)</span>
+    <span class="s1">@ResponseBody</span>
+    <span class="s0">public </span><span class="s1">ResponseEntity </span><span class="s2">&lt;</span><span class="s1">String</span><span class="s2">&gt; </span><span class="s1">logout </span><span class="s2">(</span><span class="s1">@RequestBody String</span>
+
+
+<span class="s2">}</span>
+
+</pre>
+</body>
+</html>
