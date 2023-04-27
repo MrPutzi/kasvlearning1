@@ -2,9 +2,12 @@ package sk.kasv.fekete.Controller;
 
 import com.mongodb.client.*;
 import org.bson.Document;
+import org.bson.json.JsonObject;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sk.kasv.fekete.Database.DatabaseManager;
+import sk.kasv.fekete.Util.Lecture;
 import sk.kasv.fekete.Util.Token;
 import sk.kasv.fekete.Util.User;
 import sk.kasv.fekete.Util.Util;
@@ -18,7 +21,7 @@ import java.util.Map;
 @CrossOrigin
 public class RestController {
 
-    Map<String,String> tokens = new HashMap<>();
+    Map<String, String> tokens = new HashMap<>();
     Util util = new Util();
     DatabaseManager databaseManager = new DatabaseManager();
 
@@ -47,10 +50,9 @@ public class RestController {
     /**
      * @author: Roland Fekete
      * @date: 2023.04.26
-     * @description: This method is used to login a user
+     * @description: This method is used to log in a user
      * @if user exists and password is correct, return role constant
      */
-
     @PostMapping(value = "/login", consumes = "application/json", produces = "application/json")
     @ResponseBody
     public ResponseEntity<String> login(@RequestBody User user) {
@@ -65,80 +67,68 @@ public class RestController {
             String role = document.getString("role");
             String token = new Util().generateToken(user.getUsername(), user.getPassword());
             Token.getInstance().insertToken(user.getUsername(), token);
-           if (role.equals("ADMIN") || role.equals("USER")) {
             databaseManager.insertLogWithToken(user.getUsername(), new Date(), token);
             if (role.equals("ADMIN")) {
-                return ResponseEntity.ok("Admin logged in");
+                return ResponseEntity.status((HttpStatus.OK)).body("Admin logged in" + token);
             } else if (role.equals("USER")) {
-                return ResponseEntity.ok("User logged in");
+                return ResponseEntity.status(HttpStatus.OK).body(" User " + user.getUsername() + " logged in " + token);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unknown role");
             }
-           }
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
         }
-        return ResponseEntity.ok("User not found");
     }
-
-
-
-  /*  @PostMapping (value = "/logout", consumes = "application/json", produces = "application/json")
-    @ResponseBody
-    public ResponseEntity <String> logout (@RequestBody String data) {
-        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
-        MongoDatabase database = mongoClient.getDatabase("Lectures");
-        MongoCollection<Document> collection = database.getCollection("User");
-        Document user = new Document().append("username", data).append("password", data);
-        FindIterable<Document> iterable = collection.find(user);
-        Iterator<Document> iterator = iterable.iterator();
-        if (iterator.hasNext()) {
-            Document document = (Document) iterator.next();
-            String passwordFromDatabase = document.getString("password");
-            if (passwordFromDatabase.equals(data)) {
-                String token = new Util().generateToken(data, data);
-                Token.getInstance().deleteToken(data);
-                String role = document.getString("role");
-                if (role.equals("ADMIN")) {
-                    return ResponseEntity.ok("Admin logged out");
-                } else if (role.equals("USER")) {
-                    return ResponseEntity.ok("User logged out");
-                }
-            }
-        }
-        return ResponseEntity.ok("User not found");
-    }
-   */
 
     /**
      * @author: Roland Fekete
      * @date: 2023.04.26
-     * @description: This method is used to logout a user
+     * @description: This method is used to log out a user
      */
- @PostMapping (value = "/logout", consumes = "application/json", produces = "application/json")
+    @PostMapping(value = "/logout/{username}", consumes = "application/json", produces = "application/json")
     @ResponseBody
-    public ResponseEntity <String> logout (@RequestBody String dat, @RequestParam String token) {
-        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
-        MongoDatabase database = mongoClient.getDatabase("Lectures");
-        MongoCollection<Document> collection = database.getCollection("User");
-        Document user = new Document().append("username", dat).append("password", dat);
-        FindIterable<Document> iterable = collection.find(user);
-        Iterator<Document> iterator = iterable.iterator();
-        if (iterator.hasNext()) {
-            Document document = (Document) iterator.next();
-            String passwordFromDatabase = document.getString("password");
-            if (passwordFromDatabase.equals(dat)) {
-                String tokenFromDatabase = new Util().generateToken(dat, dat);
-                if (tokenFromDatabase.equals(token)) {
-                    Token.getInstance().deleteToken(dat);
-                    String role = document.getString("role");
-                    if (role.equals("ADMIN")) {
-                        return ResponseEntity.ok("Admin logged out");
-                    } else if (role.equals("USER")) {
-                        return ResponseEntity.ok("User logged out");
-                    }
-                }
-            }
+    public ResponseEntity<Map<String, String>> logout(@PathVariable String username, @RequestHeader String token) {
+        if (token.contains("Bearer")) {
+            token = token.substring(7);
         }
-        return ResponseEntity.ok("User not found");
+        if (Token.getInstance().validateToken(username, token)) {
+            Token.getInstance().removeToken(username, token);
+            return ResponseEntity.ok(Map.of("message", "Logout successful"));
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token"));
+        }
     }
 
+    @PostMapping(value = "/changepassword/{username}", consumes = "application/json", produces = "application/json")
+    @ResponseBody
+    public ResponseEntity<String> changePassword(@PathVariable String username, @RequestBody User user, @RequestHeader String token) {
+        if (token.contains("Bearer")) {
+            token = token.substring(7);
+        }
+        if (Token.getInstance().validateToken(username, token)) {
+            MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+            MongoDatabase database = mongoClient.getDatabase("Lectures");
+            MongoCollection<Document> collection = database.getCollection("User");
+            Document query = new Document("username", username);
+            Document userDoc = collection.find(query).first();
+            if (userDoc != null) {
+                String currentPassword = userDoc.getString("password");
+                if (currentPassword.equals(user.getPassword())) {
+                    // New password cannot be the same as the current password
+                    return ResponseEntity.badRequest().body("New password must be different from current password");
+                }
+                // Update the password in the user document
+                userDoc.put("password", user.getPassword());
+                collection.replaceOne(query, userDoc);
+                return ResponseEntity.ok("Password changed successfully");
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }
 
+
+    }
 }
 

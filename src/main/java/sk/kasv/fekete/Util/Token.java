@@ -4,65 +4,41 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Token {
-    private Token(){  }
+    // 1. Create a private constructor to prevent external instantiation
+    private Token() {}
 
-    /**7
-     * 1. Create a static instance of the class
-     * 2. Create a public static method that returns the instance of the class
-     */
-private static Token tokenManager = new Token();
-    public static Token getInstance(){
-        return tokenManager;
+    // 2. Create a static instance of the class
+    private static final Token INSTANCE = new Token();
+
+    // 3. Create a public static method that returns the instance of the class
+    public static Token getInstance() {
+        return INSTANCE;
     }
 
-    /**
-     * 1. Create a map to store the tokens
-     */
+    // 4. Create a map to store the tokens
+    private final Map<String, String> tokens = new HashMap<>();
 
-    private Map<String, String> tokens = new HashMap<>();
-
-    /**
-     * 1. Create a method to insert a token
-     * @param username
-     * @param token
-     */
-
-    public void insertToken(String username, String token){
+    // 5. Create a method to insert a token
+    public void insertToken(String username, String token) {
         tokens.put(username, token);
     }
 
-    /**
-     * 1. Create a method to delete a token
-     * @param username
-     */
-
-    public void deleteToken(String username){
-tokens.remove(username);
+    // 6. Create a method to remove a token
+    public void removeToken(String username) {
+        tokens.remove(username);
     }
 
-    /**
-     * 1. Create a method to check if a token is valid
-     * @param username
-     * @param token
-     * @return true if the token is valid, false otherwise
-     */
-
-    public boolean checkToken(String username, String token){
-    String token2 = tokens.get(username);
-    if (token2 == null) {
-        return false;
-    }
-    else {
-        return token2.equals(token);
+    // 7. Create a method to check if a token is valid
+    public boolean validateToken(String username, String token) {
+        String storedToken = tokens.get(username);
+        return storedToken != null && storedToken.equals(token);
     }
 
-
+    public void removeToken(String username, String token) {
+        String storedToken = tokens.get(username);
+        if (storedToken != null && storedToken.equals(token)) {
+            tokens.remove(username);
+        }
     }
-
-
-
-
-
-
 
 }
