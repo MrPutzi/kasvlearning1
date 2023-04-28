@@ -53,6 +53,7 @@ public class RestController {
      * @description: This method is used to log in a user
      * @if user exists and password is correct, return role constant
      */
+    @CrossOrigin
     @PostMapping(value = "/login", consumes = "application/json", produces = "application/json")
     @ResponseBody
     public ResponseEntity<String> login(@RequestBody User user) {
@@ -98,6 +99,11 @@ public class RestController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token"));
         }
     }
+    /**
+     * @author: Roland Fekete
+     * @date: 2023.04.28
+     * @description: This method is used to change password
+     */
 
     @PostMapping(value = "/changepassword/{username}", consumes = "application/json", produces = "application/json")
     @ResponseBody
@@ -120,12 +126,12 @@ public class RestController {
                 // Update the password in the user document
                 userDoc.put("password", user.getPassword());
                 collection.replaceOne(query, userDoc);
-                return ResponseEntity.ok("Password changed successfully");
+                return new ResponseEntity<>("Password changed", HttpStatus.OK);
             } else {
-                return ResponseEntity.notFound().build();
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
             }
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+            return new ResponseEntity<>("Invalid token", HttpStatus.UNAUTHORIZED);
         }
 
 

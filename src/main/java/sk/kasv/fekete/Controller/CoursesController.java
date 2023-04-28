@@ -7,12 +7,13 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import sk.kasv.fekete.Util.Lecture;
 
+import java.util.ArrayList;
+import java.util.List;
+
+@CrossOrigin
 public class CoursesController extends RestController {
 
     @PostMapping(value = "/course/new", consumes = "application/json", produces = "application/json")
@@ -35,10 +36,24 @@ public class CoursesController extends RestController {
         }
     }
 
+    @CrossOrigin
     @GetMapping(value = "/courses", consumes = "application/json", produces = "application/json")
     @ResponseBody
-    public ResponseEntity<String> getLectures(@Re) {
-
-
+    public ResponseEntity<List<Lecture>> getAllLectures() {
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("Course");
+        List<Lecture> lectures = new ArrayList<>();
+        for (Document doc : collection.find()) {
+            Lecture lecture = new Lecture(
+                    doc.getString("title"),
+                    doc.getString("description"),
+                    doc.getString("lector"),
+                    doc.getDate("date") + " ",
+                    doc.getList("participants", String.class)
+            );
+            lectures.add(lecture);
+        }
+        return ResponseEntity.ok(lectures);
     }
 }
