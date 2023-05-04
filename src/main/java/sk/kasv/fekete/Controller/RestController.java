@@ -70,9 +70,9 @@ public class RestController {
             Token.getInstance().insertToken(user.getUsername(), token);
             databaseManager.insertLogWithToken(user.getUsername(), new Date(), token);
             if (role.equals("ADMIN")) {
-                return ResponseEntity.status((HttpStatus.OK)).body("Admin logged in" + token);
+                return ResponseEntity.status((HttpStatus.OK)).body(token);
             } else if (role.equals("USER")) {
-                return ResponseEntity.status(HttpStatus.OK).body(" User " + user.getUsername() + " logged in " + token);
+                return ResponseEntity.status(HttpStatus.OK).body(token);
             } else {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unknown role");
             }
@@ -133,8 +133,6 @@ public class RestController {
         } else {
             return new ResponseEntity<>("Invalid token", HttpStatus.UNAUTHORIZED);
         }
-
-
     }
 }
 

@@ -1,5 +1,6 @@
 package sk.kasv.fekete.Controller;
 
+import com.mongodb.MongoException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
@@ -37,23 +38,23 @@ public class CoursesController extends RestController {
     }
 
     @CrossOrigin
-    @GetMapping(value = "/courses", consumes = "application/json", produces = "application/json")
+    @GetMapping(value = "/courses", produces = "application/json")
     @ResponseBody
-    public ResponseEntity<List<Lecture>> getAllLectures() {
+    public ResponseEntity<List<Document>> getAllCourses() {
         MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
         MongoDatabase database = mongoClient.getDatabase("Lectures");
         MongoCollection<Document> collection = database.getCollection("Course");
-        List<Lecture> lectures = new ArrayList<>();
+
+        List<Document> courses = new ArrayList<>();
         for (Document doc : collection.find()) {
-            Lecture lecture = new Lecture(
-                    doc.getString("title"),
-                    doc.getString("description"),
-                    doc.getString("lector"),
-                    doc.getDate("date") + " ",
-                    doc.getList("participants", String.class)
-            );
-            lectures.add(lecture);
+            courses.add(doc);
         }
-        return ResponseEntity.ok(lectures);
+
+        return ResponseEntity.ok(courses);
     }
+
+
+
+
+
 }
