@@ -1,8 +1,15 @@
 package sk.kasv.fekete.Database;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.mongodb.client.*;
+import net.minidev.json.JSONObject;
+import net.minidev.json.parser.JSONParser;
 import org.bson.Document;
 import sk.kasv.fekete.Util.Role;
+import sk.kasv.fekete.Util.Token;
+import sk.kasv.fekete.Controller.RestController;
 
 import java.util.Date;
 import java.util.Iterator;
@@ -25,7 +32,7 @@ public class DatabaseManager {
      * @date: 2023.04.21
      */
 
-    public Role checkUser(String username, String password) {
+    public static Role checkUser(String username, String password) {
         MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
         MongoDatabase database = mongoClient.getDatabase("Lectures");
         MongoCollection<Document> collection = database.getCollection("User");
@@ -59,9 +66,47 @@ public class DatabaseManager {
         collection.insertOne(document);
     }
 
+    //check the log if the user is not logged in
+    public String checkLog(String username) {
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("Log");
+        Document user = new Document().append("username", username);
+        FindIterable<Document> iterable = collection.find(user);
+        Iterator<Document> iterator = iterable.iterator();
+        if (iterator.hasNext()) {
+            Document document = (Document) iterator.next();
+            String token = document.getString("token");
+            return token;
+        } else {
+            return null;
+        }
+    }
+
+    //clears the whole log collection
+    public void deleteTokenFromLog() {
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("Log");
+        collection.deleteMany(new Document());
+    }
 
 
-
+    public String getUsernameFromToken(String token) {
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("Log");
+        Document user = new Document().append("token", token);
+        FindIterable<Document> iterable = collection.find(user);
+        Iterator<Document> iterator = iterable.iterator();
+        if (iterator.hasNext()) {
+            Document document = (Document) iterator.next();
+            String username = document.getString("username");
+            return username;
+        } else {
+            return null;
+        }
+    }
 
 
 

@@ -1,6 +1,5 @@
 package sk.kasv.fekete.Util;
 
-import java.util.Date;
 import java.util.List;
 
 public class Lecture {
@@ -10,7 +9,7 @@ public class Lecture {
     private String date;
     private List <String> participants;
 
-    public Lecture(String title, String description, String lector, Date date, List<String> participants) {
+    public Lecture() {
         this.title = title;
         this.description = description;
         this.lector = lector;

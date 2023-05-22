@@ -34,6 +34,14 @@ public class Token {
         return storedToken != null && storedToken.equals(token);
     }
 
+    public String validateUsername(String token, String username) {
+        for (Map.Entry<String, String> entry : tokens.entrySet()) {
+            if (entry.getValue().equals(token) && entry.getKey().equals(username)) {
+                return username;
+            }
+        }
+        return username;
+    }
     public void removeToken(String username, String token) {
         String storedToken = tokens.get(username);
         if (storedToken != null && storedToken.equals(token)) {
