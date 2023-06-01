@@ -1,19 +1,15 @@
 package sk.kasv.fekete.Database;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.mongodb.client.*;
-import net.minidev.json.JSONObject;
-import net.minidev.json.parser.JSONParser;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.bson.Document;
+import org.joda.time.format.DateTimeFormatter;
+import sk.kasv.fekete.Controller.CoursesController;
 import sk.kasv.fekete.Util.Role;
-import sk.kasv.fekete.Util.Token;
-import sk.kasv.fekete.Controller.RestController;
 
 import java.util.Date;
 import java.util.Iterator;
-
 import static com.mongodb.client.model.Filters.eq;
 
 /**
@@ -23,7 +19,9 @@ import static com.mongodb.client.model.Filters.eq;
  */
 
 public class DatabaseManager {
+    private static CoursesController instance;
     private MongoCollection<Document> userCollection;
+    private ServletRequest request;
 
     /**
      * @param username
@@ -53,45 +51,41 @@ public class DatabaseManager {
         }
         return null;
     }
-
-    //insert log in database
-    public void insertLogWithToken(String username, Date date, String token) {
-        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
-        MongoDatabase database = mongoClient.getDatabase("Lectures");
-        MongoCollection<Document> collection = database.getCollection("Log");
-        Document document = new Document()
-                .append("username", username)
-                .append("date", date)
-                .append("token", token);
-        collection.insertOne(document);
+    public static CoursesController getInstance() {
+        return instance;
     }
+    public static void setInstance(CoursesController instance) {
+        DatabaseManager.instance = instance;
+    }
+    public void insertLogWithToken(Date date, String username) {
+        try (MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017")) {
+            MongoDatabase database = mongoClient.getDatabase("Lectures");
+            MongoCollection<Document> collection = database.getCollection("Log");
 
-    //check the log if the user is not logged in
-    public String checkLog(String username) {
-        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
-        MongoDatabase database = mongoClient.getDatabase("Lectures");
-        MongoCollection<Document> collection = database.getCollection("Log");
-        Document user = new Document().append("username", username);
-        FindIterable<Document> iterable = collection.find(user);
-        Iterator<Document> iterator = iterable.iterator();
-        if (iterator.hasNext()) {
-            Document document = (Document) iterator.next();
-            String token = document.getString("token");
-            return token;
-        } else {
-            return null;
+            // Create the document to be inserted
+            Document document = new Document()
+                    .append("date", date)
+                    .append("username", username);
+
+            // Insert the document into the collection
+            collection.insertOne(document);
+        } catch (Exception e) {
+            // Handle exceptions appropriately
         }
     }
 
-    //clears the whole log collection
+    public void handleRequest(HttpServletRequest request, String username, DateTimeFormatter date) {
+        // Call the insertLogWithToken method and pass the HttpServletRequest object
+        //insertLogWithToken(request, username, date);
+    }
+
     public void deleteTokenFromLog() {
-        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+      /*  MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
         MongoDatabase database = mongoClient.getDatabase("Lectures");
         MongoCollection<Document> collection = database.getCollection("Log");
         collection.deleteMany(new Document());
+       */
     }
-
-
     public String getUsernameFromToken(String token) {
         MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
         MongoDatabase database = mongoClient.getDatabase("Lectures");
@@ -108,9 +102,28 @@ public class DatabaseManager {
         }
     }
 
+    public void deleteUser(String userToDelete) {
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("User");
+        collection.deleteOne(eq("username", userToDelete));
+    }
+
+    public void changePassword(String username, String password, String newPassword) {
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("User");
+        Document user = new Document().append("username", username).append("password", password);
+        FindIterable<Document> iterable = collection.find(user);
+        Iterator<Document> iterator = iterable.iterator();
+        if (iterator.hasNext()) {
+            Document document = (Document) iterator.next();
+            document.put("password", newPassword);
+            collection.replaceOne(eq("username", username), document);
+        }
 
 
-
-
+    }
 }
+
 

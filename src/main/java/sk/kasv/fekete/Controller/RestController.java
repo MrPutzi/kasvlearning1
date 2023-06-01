@@ -2,22 +2,25 @@ package sk.kasv.fekete.Controller;
 
 import com.google.gson.JsonObject;
 import com.mongodb.client.*;
-import jakarta.annotation.PreDestroy;
+import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sk.kasv.fekete.Database.DatabaseManager;
-import sk.kasv.fekete.Util.Role;
 import sk.kasv.fekete.Util.Token;
 import sk.kasv.fekete.Util.User;
 import sk.kasv.fekete.Util.Util;
-import sk.kasv.fekete.Controller.CoursesController;
+
+import javax.servlet.http.HttpServletRequest;
 import java.text.ParseException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+import static org.joda.time.format.ISODateTimeFormat.date;
 
 
 @org.springframework.web.bind.annotation.RestController
@@ -35,8 +38,6 @@ public class RestController {
      * @author: Roland Fekete
      * @date: 18/05/2023
      **/
-
-
     @PostMapping(value = "/register", consumes = "application/json", produces = "application/json")
     @ResponseBody
     public ResponseEntity<String> register(@RequestBody User user) {
@@ -54,7 +55,7 @@ public class RestController {
 
     /**
      * @name: LOGIN
-     * @description: This method is used to log in a user and generate a token for him/her
+     * @description: This method is used to log in a user and generate a token for user
      * @author: Roland Fekete
      * @date: 18/05/2023
      **/
@@ -71,13 +72,6 @@ public class RestController {
             MongoDatabase database = mongoClient.getDatabase("Lectures");
             MongoCollection<Document> collection = database.getCollection("User");
             Document document = collection.find(new Document("username", username)).first();
-            // if (databaseManager.checkLog(username) != null) {
-            //     return new ResponseEntity<>(HttpStatus.BAD_REQUEST).ok(new JSONObject(Map.of("error", "User already logged in with token :  " + tokens.get(username)+" ")));
-            //}
-            //if (!data.contains("username") || !data.contains("password"))
-            //{
-            //   return new ResponseEntity<>(HttpStatus.BAD_REQUEST).ok(new JSONObject(Map.of("error", "Bad request")));
-            //}
             if (!response.containsKey("username") || !response.containsKey("password")) {
                 return ResponseEntity.badRequest().body(new JSONObject(Map.of("error", "Invalid JSON format. 'username' and 'password' fields are required.")));
             }
@@ -86,14 +80,16 @@ public class RestController {
                     String token = util.generateToken(username, password);
                     tokens.put(username, token);
                     DatabaseManager db = new DatabaseManager();
-                    db.insertLogWithToken(username, Date, token);
+                    //db.handleRequest((jakarta.servlet.http.HttpServletRequest) request,username, date());
                     Token.getInstance().insertToken(username, token);
                     //databaseManager.insertLogWithToken(username, new Date(), token);
                     return ResponseEntity.ok(new JSONObject(Map.of("token", token, "role", document.get("role"), "username", document.get("username"))));
                 } else {
+                    databaseManager.insertLogWithToken(Date, username);
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new JSONObject(Map.of("error", "Invalid password")));
                 }
             } else {
+                databaseManager.insertLogWithToken(Date, username); 
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new JSONObject(Map.of("error", "Invalid username")));
             }
         } catch (net.minidev.json.parser.ParseException e) {
@@ -109,23 +105,25 @@ public class RestController {
      **/
 
     @CrossOrigin
-    @PostMapping(value = "/logout/{username}", consumes = "application/json", produces = "application/json")
+    @PostMapping(value = "/logout")
     @ResponseBody
-    public ResponseEntity<Map<String, String>> logout(@PathVariable String username, @RequestHeader String token) {
-        if (username == null || username.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Username parameter is missing"));
+    public ResponseEntity<Object> logout(@RequestHeader("token") String token) {
+        if (token.contains("Bearer")) {
+            token = token.substring(7);
         }
-        if (token == null || token.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Token header is missing"));
+        String username = Token.getInstance().validateUsername(token);
+
+        if (username == null) {
+            JsonObject response = new JsonObject();
+            response.addProperty("error", "Invalid token.");
+            return ResponseEntity.badRequest().body(response.toString());
         }
-        token = token.substring(7);
-        if (!Token.getInstance().validateToken(username, token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token"));
-        }
-        Token.getInstance().removeToken(username);
+
+        Token.getInstance().removeToken(token);
         databaseManager.deleteTokenFromLog();
         return ResponseEntity.ok(Map.of("message", "Logout successful"));
     }
+
 
     /**
      * @name: CHANGE PASSWORD
@@ -134,46 +132,86 @@ public class RestController {
      * @date: 18/05/2023
      **/
 
-    @PostMapping(value = "/changepassword/{username}", consumes = "application/json", produces = "application/json")
+    @CrossOrigin
+    @PostMapping(value = "/changepassword", consumes = "application/json", produces = "application/json")
     @ResponseBody
-    public ResponseEntity<String> changePassword(@PathVariable String username, @RequestBody User user, @RequestHeader String token) {
+    public ResponseEntity<Object> changePassword(@RequestHeader("token") String token, @RequestBody String data) throws ParseException {
         if (token.contains("Bearer")) {
             token = token.substring(7);
         }
-        if (Token.getInstance().validateToken(username, token)) {
-            MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
-            MongoDatabase database = mongoClient.getDatabase("Lectures");
-            MongoCollection<Document> collection = database.getCollection("User");
-            Document query = new Document("username", username);
-            Document userDoc = collection.find(query).first();
-            if (userDoc != null) {
-                String currentPassword = userDoc.getString("password");
-                if (currentPassword.equals(user.getPassword())) {
-                    // New password cannot be the same as the current password
-                    return ResponseEntity.badRequest().body("New password must be different from current password");
-                }
-                // Update the password in the user document
-                userDoc.put("password", user.getPassword());
-                collection.replaceOne(query, userDoc);
-                return new ResponseEntity<>("Password changed", HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
-            }
+        String username = Token.getInstance().validateUsername(token);
+        JSONObject response = null;
+        try {
+            response = (JSONObject) parser.parse(data);
+        } catch (net.minidev.json.parser.ParseException e) {
+            throw new RuntimeException(e);
+        }
+        String oldPassword = (String) response.get("oldPassword");
+        String newPassword = (String) response.get("newPassword");
+        if (username == null) {
+            return ResponseEntity.badRequest().body(new JSONObject(Map.of("error", "Invalid token.")));
+        }
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("User");
+        Document document = collection.find(new Document("username", username)).first();
+        if (document.get("password").equals(oldPassword)) {
+            databaseManager.changePassword(username, oldPassword, newPassword);
+            return ResponseEntity.ok().body(new JSONObject(Map.of("message", "Password changed")));
         } else {
-            return new ResponseEntity<>("Invalid token", HttpStatus.UNAUTHORIZED);
+            return ResponseEntity.badRequest().body(new JSONObject(Map.of("error", "Invalid password")));
         }
     }
 
     /**
-     * @name: DESTROY
-     * @description: This method is used to clear out the log collection in the database when the server is shut down.
-     * @author: Roland Fekete
+     * @name: DELETE USER
+     * @description: This method is used to delete a user from the database by the admin user with admin role. It is not allowed to delete an admin user with admin role
      * @date: 18/05/2023
-     */
+     **/
 
+    @CrossOrigin
+    @DeleteMapping(value = "/deleteuser", consumes = "application/json", produces = "application/json")
+    @ResponseBody
+    public ResponseEntity<Object> deleteUser(@RequestHeader("token") String token, @RequestBody String data) throws ParseException {
+        if (token.contains("Bearer")) {
+            token = token.substring(7);
+        }
+        String username = Token.getInstance().validateUsername(token);
+        JSONObject response = null;
+        try {
+            response = (JSONObject) parser.parse(data);
+        } catch (net.minidev.json.parser.ParseException e) {
+            throw new RuntimeException(e);
+        }
+        String userToDelete = (String) response.get("userToDelete");
+        if (username == null) {
+            return ResponseEntity.badRequest().body(new JSONObject(Map.of("error", "Invalid token.")));
+        }
+        if (username.equals("admin")) {
+            if (userToDelete.equals("admin")) {
+                return ResponseEntity.badRequest().body(new JSONObject(Map.of("error", "You cannot delete admin.")));
+            } else {
+                databaseManager.deleteUser(userToDelete);
+                return ResponseEntity.ok().body(new JSONObject(Map.of("message", "User deleted")));
+            }
+        }
+        return ResponseEntity.badRequest().body(new JSONObject(Map.of("error", "You are not admin.")));
+    }
 
-
+    @CrossOrigin
+    @GetMapping("/test/log")
+    @ResponseBody
+    public ResponseEntity<Object> getLog() {
+        MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
+        MongoDatabase database = mongoClient.getDatabase("Lectures");
+        MongoCollection<Document> collection = database.getCollection("Log");
+        FindIterable<Document> iterDoc = collection.find();
+        Iterator it = iterDoc.iterator();
+        JSONArray array = new JSONArray();
+        while (it.hasNext()) {
+            array.add(it.next());
+        }
+        return ResponseEntity.ok(array);
+    }
 }
-
-
 
