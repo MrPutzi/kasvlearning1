@@ -8,8 +8,8 @@ import org.joda.time.format.DateTimeFormatter;
 import sk.kasv.fekete.Controller.CoursesController;
 import sk.kasv.fekete.Util.Role;
 
-import java.util.Date;
-import java.util.Iterator;
+import java.util.*;
+
 import static com.mongodb.client.model.Filters.eq;
 
 /**
@@ -121,9 +121,56 @@ public class DatabaseManager {
             document.put("password", newPassword);
             collection.replaceOne(eq("username", username), document);
         }
-
-
     }
+    public void reorderSeats() {
+        try (MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017")) {
+            MongoDatabase database = mongoClient.getDatabase("Lectures");
+            MongoCollection<Document> collection = database.getCollection("Course");
+
+            // Retrieve all documents from the collection
+            FindIterable<Document> documents = collection.find();
+
+            for (Document document : documents) {
+                // Retrieve the participants array from the document
+                List<Document> participants = document.getList("participants", Document.class);
+
+                // Create a map to store existing seats
+                Map<Integer, Document> seatMap = new HashMap<>();
+
+                // Populate the seat map and reorder seats
+                for (Document participant : participants) {
+                    Integer seat = participant.getInteger("seat");
+                    if (seat != null) {
+                        seatMap.put(seat, participant);
+                    }
+                }
+
+                // Create a new list to store participants with reordered seats
+                List<Document> reorderedParticipants = new ArrayList<>();
+
+                // Add missing seats with empty participant entries
+                for (int i = 1; i <= 30; i++) {
+                    if (!seatMap.containsKey(i)) {
+                        Document emptyParticipant = new Document("seat", i);
+                        reorderedParticipants.add(emptyParticipant);
+                    } else {
+                        reorderedParticipants.add(seatMap.get(i));
+                    }
+                }
+
+                // Update the participants list with reordered seats
+                document.put("participants", reorderedParticipants);
+
+                // Update the document in the collection
+                collection.replaceOne(eq("_id", document.get("_id")), document);
+            }
+        } catch (Exception e) {
+            // Handle exceptions appropriately
+        }
+}
+
+
+
 }
 
 

@@ -22,6 +22,7 @@ public class Main {
         }
         //swagger html link : http://localhost:8080/swagger-ui.html
 
+
     @Bean
     public CorsFilter corsFilter() {
         CorsFilter filter = new CorsFilter();
@@ -37,6 +38,7 @@ public class Main {
     @PreDestroy
     public void destroy() {
         databaseManager.deleteTokenFromLog();
+        databaseManager.reorderSeats();
 
     }
 
